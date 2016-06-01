@@ -1,0 +1,27 @@
+Description: disable a require 'rubygems'.
+Author: Lucas Nussbaum <lucas@debian.org>
+Last-Update: 2016-06-01
+--- a/lib/minitest/autorun.rb
++++ b/lib/minitest/autorun.rb
+@@ -1,10 +1,3 @@
+-begin
+-  require "rubygems"
+-  gem "minitest"
+-rescue Gem::LoadError
+-  # do nothing
+-end
+-
+ require "minitest"
+ require "minitest/spec"
+ require "minitest/mock"
+--- a/lib/minitest.rb
++++ b/lib/minitest.rb
+@@ -86,7 +86,7 @@
+ 
+     seen = {}
+ 
+-    require "rubygems" unless defined? Gem
++    #require "rubygems" unless defined? Gem
+ 
+     Gem.find_files("minitest/*_plugin.rb").each do |plugin_path|
+       name = File.basename plugin_path, "_plugin.rb"

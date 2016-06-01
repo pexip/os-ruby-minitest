@@ -1,0 +1,18 @@
+Description: force external encoding to UTF-8
+ some tests require UTF-8 strings whereas the default locale is C in building
+ environment
+Origin: vendor
+Author: Cédric Boutillier <boutil@debian.org>
+Forwarded: no
+Last-Update: 2016-06-01
+
+--- a/test/minitest/test_minitest_test.rb
++++ b/test/minitest/test_minitest_test.rb
+@@ -1,5 +1,7 @@
+ # encoding: UTF-8
+ 
++Encoding.default_external = "UTF-8"
++
+ require "pathname"
+ require "minitest/metametameta"
+ 
