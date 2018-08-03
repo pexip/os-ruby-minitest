@@ -1,8 +1,9 @@
 Source: ruby-minitest
 Section: ruby
 Priority: optional
-Maintainer: Debian Ruby Extras Maintainers <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
-Uploaders: Lucas Nussbaum <lucas@debian.org>,
+Maintainer: Pexip AS <packaging@pexip.com>
+XSBC-Pexip-Original-Maintainer: Debian Ruby Extras Maintainers <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
+XSBC-Pexip-Original-Uploaders: Lucas Nussbaum <lucas@debian.org>,
            Cédric Boutillier <boutil@debian.org>
 Build-Depends: debhelper (>= 9~),
                gem2deb
@@ -12,6 +13,7 @@ Vcs-Browser: https://anonscm.debian.org/cgit/pkg-ruby-extras/ruby-minitest.git
 Homepage: https://github.com/seattlerb/minitest
 Testsuite: autopkgtest-pkg-ruby
 XS-Ruby-Versions: all
+XS-Pexip-Upstream: http://ftp.debian.org/debian/ stretch
 
 Package: ruby-minitest
 Architecture: all
