@@ -1,3 +1,30 @@
+ruby-minitest (5.11.3-1) unstable; urgency=medium
+
+  * New upstream version 5.11.3
+  * Use salsa.debian.org in Vcs-* fields
+  * Move debian/watch to gemwatch.debian.net
+  * Bump debhelper compatibility level to 11
+  * Bump Standards-Version to 4.2.0 (no changes needed)
+  * Refresh disable-some-tests patch
+  * Use https in copyright format
+
+ -- Cédric Boutillier <boutil@debian.org>  Thu, 16 Aug 2018 05:16:03 +0200
+
+ruby-minitest (5.10.3-1) unstable; urgency=medium
+
+  * New upstream version 5.10.3.
+  * Bump Standards-Version to 4.0.0. No changes needed.
+
+ -- Lucas Nussbaum <lucas@debian.org>  Wed, 26 Jul 2017 09:11:21 +0200
+
+ruby-minitest (5.10.2-1) unstable; urgency=medium
+
+  * New upstream version 5.10.2
+  * Refresh patches
+  * Disable two more failing tests
+
+ -- Lucas Nussbaum <lucas@debian.org>  Sun, 02 Jul 2017 17:18:16 +0200
+
 ruby-minitest (5.9.0-1) unstable; urgency=medium
 
   * Imported Upstream version 5.9.0

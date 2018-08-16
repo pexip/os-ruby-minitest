@@ -8,13 +8,24 @@ class Minitest::Test
   end
 end
 
+class FakeNamedTest < Minitest::Test
+  @@count = 0
+
+  def self.name
+    @fake_name ||= begin
+                     @@count += 1
+                     "FakeNamedTest%02d" % @@count
+                   end
+  end
+end
+
 class MetaMetaMetaTestCase < Minitest::Test
   attr_accessor :reporter, :output, :tu
 
   def run_tu_with_fresh_reporter flags = %w[--seed 42]
     options = Minitest.process_args flags
 
-    @output = StringIO.new("")
+    @output = StringIO.new("".encode('UTF-8'))
 
     self.reporter = Minitest::CompositeReporter.new
     reporter << Minitest::SummaryReporter.new(@output, options)
@@ -57,6 +68,7 @@ class MetaMetaMetaTestCase < Minitest::Test
     output.sub!(/Finished in .*/, "Finished in 0.00")
     output.sub!(/Loaded suite .*/, "Loaded suite blah")
 
+    output.gsub!(/FakeNamedTest\d+/, "FakeNamedTestXX")
     output.gsub!(/ = \d+.\d\d s = /, " = 0.00 s = ")
     output.gsub!(/0x[A-Fa-f0-9]+/, "0xXXX")
     output.gsub!(/ +$/, "")

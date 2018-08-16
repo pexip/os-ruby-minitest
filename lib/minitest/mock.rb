@@ -37,7 +37,7 @@ module Minitest # :nodoc:
       end
     end
 
-    def initialize(delegator = nil) # :nodoc:
+    def initialize delegator = nil # :nodoc:
       @delegator = delegator
       @expected_calls = Hash.new { |calls, name| calls[name] = [] }
       @actual_calls   = Hash.new { |calls, name| calls[name] = [] }
@@ -66,8 +66,19 @@ module Minitest # :nodoc:
     #
     #   @mock.expect(:uses_one_string, true, ["foo"])
     #   @mock.uses_one_string("bar") # => raises MockExpectationError
+    #
+    # If a method will be called multiple times, specify a new expect for each one.
+    # They will be used in the order you define them.
+    #
+    #   @mock.expect(:ordinal_increment, 'first')
+    #   @mock.expect(:ordinal_increment, 'second')
+    #
+    #   @mock.ordinal_increment # => 'first'
+    #   @mock.ordinal_increment # => 'second'
+    #   @mock.ordinal_increment # => raises MockExpectationError "No more expects available for :ordinal_increment"
+    #
 
-    def expect(name, retval, args = [], &blk)
+    def expect name, retval, args = [], &blk
       name = name.to_sym
 
       if block_given?
@@ -104,7 +115,7 @@ module Minitest # :nodoc:
       true
     end
 
-    def method_missing(sym, *args, &block) # :nodoc:
+    def method_missing sym, *args, &block # :nodoc:
       unless @expected_calls.key?(sym) then
         if @delegator && @delegator.respond_to?(sym)
           return @delegator.public_send(sym, *args, &block)
@@ -158,7 +169,7 @@ module Minitest # :nodoc:
       retval
     end
 
-    def respond_to?(sym, include_private = false) # :nodoc:
+    def respond_to? sym, include_private = false # :nodoc:
       return true if @expected_calls.key? sym.to_sym
       return true if @delegator && @delegator.respond_to?(sym, include_private)
       __respond_to?(sym, include_private)
@@ -212,15 +223,12 @@ class Object
     metaclass.send :alias_method, new_name, name
 
     metaclass.send :define_method, name do |*args, &blk|
-      ret = if val_or_callable.respond_to? :call then
-              val_or_callable.call(*args)
-            else
-              val_or_callable
-            end
-
-      blk.call(*block_args) if blk
-
-      ret
+      if val_or_callable.respond_to? :call then
+        val_or_callable.call(*args, &blk)
+      else
+        blk.call(*block_args) if blk
+        val_or_callable
+      end
     end
 
     yield self

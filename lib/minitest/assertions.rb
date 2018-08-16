@@ -171,7 +171,20 @@ module Minitest
 
     def assert_equal exp, act, msg = nil
       msg = message(msg, E) { diff exp, act }
-      assert exp == act, msg
+      result = assert exp == act, msg
+
+      if nil == exp then
+        if Minitest::VERSION =~ /^6/ then
+          refute_nil exp, "Use assert_nil if expecting nil."
+        else
+          where = Minitest.filter_backtrace(caller).first
+          where = where.split(/:in /, 2).first # clean up noise
+
+          warn "DEPRECATED: Use assert_nil if expecting nil from #{where}. This will fail in Minitest 6."
+        end
+      end
+
+      result
     end
 
     ##
@@ -192,8 +205,8 @@ module Minitest
     # For comparing Floats.  Fails unless +exp+ and +act+ have a relative
     # error less than +epsilon+.
 
-    def assert_in_epsilon a, b, epsilon = 0.001, msg = nil
-      assert_in_delta a, b, [a.abs, b.abs].min * epsilon, msg
+    def assert_in_epsilon exp, act, epsilon = 0.001, msg = nil
+      assert_in_delta exp, act, [exp.abs, act.abs].min * epsilon, msg
     end
 
     ##
@@ -357,6 +370,10 @@ module Minitest
     # Fails unless the call returns a true value
 
     def assert_send send_ary, m = nil
+      where = Minitest.filter_backtrace(caller).first
+      where = where.split(/:in /, 2).first # clean up noise
+      warn "DEPRECATED: assert_send. From #{where}"
+
       recv, msg, *args = send_ary
       m = message(m) {
         "Expected #{mu_pp(recv)}.#{msg}(*#{mu_pp(args)}) to return true" }
@@ -386,8 +403,10 @@ module Minitest
         rescue ThreadError => e       # wtf?!? 1.8 + threads == suck
           default += ", not \:#{e.message[/uncaught throw \`(\w+?)\'/, 1]}"
         rescue ArgumentError => e     # 1.9 exception
+          raise e unless e.message.include?("uncaught throw")
           default += ", not #{e.message.split(/ /).last}"
         rescue NameError => e         # 1.8 exception
+          raise e unless e.name == sym
           default += ", not #{e.name.inspect}"
         end
         caught = false
