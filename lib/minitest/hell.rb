@@ -1,17 +1,11 @@
 require "minitest/parallel"
 
 class Minitest::Test
-  class << self
-    alias :old_test_order :test_order # :nodoc:
-
-    def test_order # :nodoc:
-      :parallel
-    end
-  end
+  parallelize_me!
 end
 
 begin
   require "minitest/proveit"
 rescue LoadError
-  # do nothing
+  warn "NOTE: `gem install minitest-proveit` for even more hellish tests"
 end
