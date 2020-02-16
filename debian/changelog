@@ -1,3 +1,9 @@
+ruby-minitest (5.11.3-1pexip1) pexip; urgency=medium
+
+  * Migrate to Buster
+
+ -- Vincent Sanders <vince@pexip.com>  Sun, 16 Feb 2020 23:38:52 +0000
+
 ruby-minitest (5.11.3-1) unstable; urgency=medium
 
   * New upstream version 5.11.3
