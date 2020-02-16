@@ -1,3 +1,130 @@
+=== 5.11.3 / 2018-01-26
+
+* 1 bug fix:
+
+  * Pushed #error? up to Reportable module. (composerinteralia)
+
+=== 5.11.2 / 2018-01-25
+
+* 1 minor enhancement:
+
+  * Reversed Test < Result. Back to < Runnable and using Reportable for shared code.
+
+* 2 bug fixes:
+
+  * Fixed Result#location for instances of Test. (alexisbernard)
+  * Fixed deprecation message for Runnable#marshal_dump. (y-yagi)
+
+=== 5.11.1 / 2018-01-02
+
+* 1 bug fix:
+
+  * Fixed Result (a superclass of Test) overriding Runnable's name accessors. (y-yagi, MSP-Greg)
+
+=== 5.11.0 / 2018-01-01
+
+* 2 major enhancements:
+
+  * Added Minitest::Result and Minitest::Result.from(runnable).
+  * Changed Minitest::Test to subclass Result and refactored methods up.
+
+* 7 minor enhancements:
+
+  * Added --no-plugins and MT_NO_PLUGINS to bypass MT plugin autoloading. Helps with bad actors installed globally.
+  * Added bench_performance_{logarithmic,power} for spec-style benchmarks. (rickhull)
+  * Added deprecation warning for Runnable#marshal_dump.
+  * Minitest.run_one_method now checks for instance of Result, not exact same class.
+  * Minitest::Test.run returns a Result version of self, not self.
+  * ProgressReporter#prerecord now explicitly prints klass.name. Allows for fakers.
+
+* 4 bug fixes:
+
+  * Object.stub no longer calls the passed block if stubbed with a callable.
+  * Object.stub now passes blocks down to the callable result.
+  * Pushed Minitest::Test#time & #time_it up to Runnable.
+  * Test nil equality directly in assert_equal. Fixes #679. (voxik)
+
+=== 5.11.0b1 / 2017-12-20
+
+* 2 major enhancements:
+
+  * Added Minitest::Result and Minitest::Result.from(runnable).
+  * Changed Minitest::Test to subclass Result and refactored methods up.
+
+* 6 minor enhancements:
+
+  * Added --no-plugins and MT_NO_PLUGINS to bypass MT plugin autoloading. Helps with bad actors installed globally.
+  * Added bench_performance_{logarithmic,power} for spec-style benchmarks. (rickhull)
+  * Minitest.run_one_method now checks for instance of Result, not exact same class.
+  * Minitest::Test.run returns a Result version of self, not self.
+  * ProgressReporter#prerecord now explicitly prints klass.name. Allows for fakers.
+  * Removed Runnable.marshal_dump/load.
+
+* 4 bug fixes:
+
+  * Object.stub no longer calls the passed block if stubbed with a callable.
+  * Object.stub now passes blocks down to the callable result.
+  * Pushed Minitest::Test#time & #time_it up to Runnable.
+  * Test nil equality directly in assert_equal. Fixes #679. (voxik)
+
+=== 5.10.3 / 2017-07-21
+
+* 1 minor enhancement:
+
+  * Extended documentation for Mock#expect for multiple calls to mock object. (insti)
+
+* 2 bug fixes:
+
+  * Finished off missing doco.
+  * Fixed verbose output on parallelize_me! classes. (chanks)
+
+=== 5.10.2 / 2017-05-09
+
+* 1 minor enhancement:
+
+  * Added suggestion in minitest/hell to install minitest/proveit.
+
+* 7 bug fixes:
+
+  * Expand MT6 to Minitest 6. (xaviershay)
+  * Fixed location of assert_send deprecation. (rab)
+  * Fixed location of nil assert_equal deprecation to work with expectations. (jeremyevans)
+  * Fixed minitest/hell to use parallelize_me! (azul)
+  * Made deprecation use warn so -W0 will silence it.
+  * Workaround for rdoc nodoc generation bug that totally f'd up minitest doco. (Paxa)
+  * Write aggregated_results directly to the IO object to avoid mixed encoding errors. (tenderlove)
+
+=== 5.10.1 / 2016-12-01
+
+* 1 bug fix:
+
+  * Added a hack/kludge to deal with missing #prerecord on reporters that aren't properly subclassing AbstractReporter (I'm looking at you minitest-reporters)
+
+=== 5.10.0 / 2016-11-30
+
+* 1 major enhancement:
+
+  * Deprecated ruby 1.8, 1.9, possibly 2.0, assert_send, & old MiniTest namespace.
+
+* 3 minor enhancements:
+
+  * Warn if assert_equal expects a nil. This will fail in minitest 6+. (tenderlove)
+  * Added AbstractReporter#prerecord and extended ProgressReporter and CompositeReporter to use it.
+  * Minor optimization: remove runnables with no runnable methods before run.
+
+* 3 bug fixes:
+
+  * Fix assert_throw rescuing any NameError and ArgumentError. (waldyr)
+  * Clean up (most of the) last remaining vestiges of minitest/unit.
+  * 2.4: removed deprecation warnings when referring to Fixnum.
+
+=== 5.9.1 / 2016-09-25
+
+* 2 bug fixes:
+
+  * Re-release to refresh gem certificate signing. ugh.
+  * Fixed hoe/minitest to not augment load path if we're actually testing minitest.  
+
 === 5.9.0 / 2016-05-16
 
 * 8 minor enhancements:
@@ -14,6 +141,13 @@
 * 1 bug fix:
 
   * Removed Interrupt from PASSTHROUGH_EXCEPTIONS (already handled). (waldyr)
+
+=== 5.8.5 / 2016-09-25
+
+* 2 bug fixes:
+
+  * Re-release to refresh gem certificate signing. ugh.
+  * Fixed hoe/minitest to not augment load path if we're actually testing minitest.  
 
 === 5.8.4 / 2016-01-21
 

@@ -2,12 +2,13 @@ require "optparse"
 require "thread"
 require "mutex_m"
 require "minitest/parallel"
+require "stringio"
 
 ##
 # :include: README.rdoc
 
 module Minitest
-  VERSION = "5.9.0" # :nodoc:
+  VERSION = "5.11.3" # :nodoc:
   ENCS = "".respond_to? :encoding # :nodoc:
 
   @@installed_at_exit ||= false
@@ -117,7 +118,7 @@ module Minitest
   #                   klass.new(runnable_method).run
 
   def self.run args = []
-    self.load_plugins
+    self.load_plugins unless args.delete("--no-plugins") || ENV["MT_NO_PLUGINS"]
 
     options = process_args args
 
@@ -147,7 +148,7 @@ module Minitest
   # sub-classes to run.
 
   def self.__run reporter, options
-    suites = Runnable.runnables.shuffle
+    suites = Runnable.runnables.reject { |s| s.runnable_methods.empty? }.shuffle
     parallel, serial = suites.partition { |s| s.test_order == :parallel }
 
     # If we run the parallel tests before the serial tests, the parallel tests
@@ -173,6 +174,8 @@ module Minitest
         puts opts
         exit
       end
+
+      opts.on "--no-plugins", "Bypass minitest plugin auto-loading (or set $MT_NO_PLUGINS)."
 
       desc = "Sets random seed. Also via env. Eg: SEED=n rake"
       opts.on "-s", "--seed SEED", Integer, desc do |m|
@@ -252,6 +255,19 @@ module Minitest
     attr_accessor :failures
 
     ##
+    # The time it took to run.
+
+    attr_accessor :time
+
+    def time_it # :nodoc:
+      t0 = Minitest.clock_time
+
+      yield
+    ensure
+      self.time = Minitest.clock_time - t0
+    end
+
+    ##
     # Name of the run.
 
     def name
@@ -263,11 +279,6 @@ module Minitest
 
     def name= o
       @NAME = o
-    end
-
-    def self.inherited klass # :nodoc:
-      self.runnables << klass
-      super
     end
 
     ##
@@ -319,6 +330,7 @@ module Minitest
     # test. See Minitest::ParallelTest::ClassMethods for an example.
 
     def self.run_one_method klass, method_name, reporter
+      reporter.prerecord klass, method_name
       reporter.record Minitest.run_one_method(klass, method_name)
     end
 
@@ -365,12 +377,20 @@ module Minitest
       @@runnables
     end
 
+    @@marshal_dump_warned = false
+
     def marshal_dump # :nodoc:
-      [self.name, self.failures, self.assertions]
+      unless @@marshal_dump_warned then
+        warn ["Minitest::Runnable#marshal_dump is deprecated.",
+              "You might be violating internals. From", caller.first].join " "
+        @@marshal_dump_warned = true
+      end
+
+      [self.name, self.failures, self.assertions, self.time]
     end
 
     def marshal_load ary # :nodoc:
-      self.name, self.failures, self.assertions = ary
+      self.name, self.failures, self.assertions, self.time = ary
     end
 
     def failure # :nodoc:
@@ -417,6 +437,109 @@ module Minitest
   end
 
   ##
+  # Shared code for anything that can get passed to a Reporter. See
+  # Minitest::Test & Minitest::Result.
+
+  module Reportable
+    ##
+    # Did this run pass?
+    #
+    # Note: skipped runs are not considered passing, but they don't
+    # cause the process to exit non-zero.
+
+    def passed?
+      not self.failure
+    end
+
+    ##
+    # The location identifier of this test. Depends on a method
+    # existing called class_name.
+
+    def location
+      loc = " [#{self.failure.location}]" unless passed? or error?
+      "#{self.class_name}##{self.name}#{loc}"
+    end
+
+    def class_name # :nodoc:
+      raise NotImplementedError, "subclass responsibility"
+    end
+
+    ##
+    # Returns ".", "F", or "E" based on the result of the run.
+
+    def result_code
+      self.failure and self.failure.result_code or "."
+    end
+
+    ##
+    # Was this run skipped?
+
+    def skipped?
+      self.failure and Skip === self.failure
+    end
+
+    ##
+    # Did this run error?
+
+    def error?
+      self.failures.any? { |f| UnexpectedError === f }
+    end
+  end
+
+  ##
+  # This represents a test result in a clean way that can be
+  # marshalled over a wire. Tests can do anything they want to the
+  # test instance and can create conditions that cause Marshal.dump to
+  # blow up. By using Result.from(a_test) you can be reasonably sure
+  # that the test result can be marshalled.
+
+  class Result < Runnable
+    include Minitest::Reportable
+
+    undef_method :marshal_dump
+    undef_method :marshal_load
+
+    ##
+    # The class name of the test result.
+
+    attr_accessor :klass
+
+    ##
+    # The location of the test method.
+
+    attr_accessor :source_location
+
+    ##
+    # Create a new test result from a Runnable instance.
+
+    def self.from runnable
+      o = runnable
+
+      r = self.new o.name
+      r.klass      = o.class.name
+      r.assertions = o.assertions
+      r.failures   = o.failures.dup
+      r.time       = o.time
+
+      r.source_location = o.method(o.name).source_location rescue ["unknown", -1]
+
+      r
+    end
+
+    def class_name # :nodoc:
+      self.klass # for Minitest::Reportable
+    end
+
+    def to_s # :nodoc:
+      return location if passed? and not skipped?
+
+      failures.map { |failure|
+        "#{failure.result_label}:\n#{self.location}:\n#{failure.message}\n"
+      }.join "\n"
+    end
+  end
+
+  ##
   # Defines the API for Reporters. Subclass this and override whatever
   # you want. Go nuts.
 
@@ -427,6 +550,13 @@ module Minitest
     # Starts reporting on the run.
 
     def start
+    end
+
+    ##
+    # About to start running a test. This allows a reporter to show
+    # that it is starting or that we are in the middle of a test run.
+
+    def prerecord klass, name
     end
 
     ##
@@ -477,9 +607,15 @@ module Minitest
   # own.
 
   class ProgressReporter < Reporter
+    def prerecord klass, name #:nodoc:
+      if options[:verbose] then
+        io.print "%s#%s = " % [klass.name, name]
+        io.flush
+      end
+    end
+
     def record result # :nodoc:
-      io.print "%s#%s = %.2f s = " % [result.class, result.name, result.time] if
-        options[:verbose]
+      io.print "%.2f s = " % [result.time] if options[:verbose]
       io.print result.result_code
       io.puts if options[:verbose]
     end
@@ -579,7 +715,7 @@ module Minitest
       io.puts unless options[:verbose] # finish the dots
       io.puts
       io.puts statistics
-      io.puts aggregated_results
+      aggregated_results io
       io.puts summary
     end
 
@@ -588,21 +724,20 @@ module Minitest
         [total_time, count / total_time, assertions / total_time]
     end
 
-    def aggregated_results # :nodoc:
+    def aggregated_results io # :nodoc:
       filtered_results = results.dup
       filtered_results.reject!(&:skipped?) unless options[:verbose]
 
-      s = filtered_results.each_with_index.map { |result, i|
-        "\n%3d) %s" % [i+1, result]
-      }.join("\n") + "\n"
-
-      s.force_encoding(io.external_encoding) if
-        ENCS and io.external_encoding and s.encoding != io.external_encoding
-
-      s
+      filtered_results.each_with_index { |result, i|
+        io.puts "\n%3d) %s" % [i+1, result]
+      }
+      io.puts
+      io
     end
 
-    alias to_s aggregated_results
+    def to_s # :nodoc:
+      aggregated_results(StringIO.new(binary_string)).string
+    end
 
     def summary # :nodoc:
       extra = ""
@@ -612,6 +747,14 @@ module Minitest
 
       "%d runs, %d assertions, %d failures, %d errors, %d skips%s" %
         [count, assertions, failures, errors, skips, extra]
+    end
+
+    private
+
+    if '<3'.respond_to? :b
+      def binary_string; ''.b; end
+    else
+      def binary_string; ''.force_encoding(Encoding::ASCII_8BIT); end
     end
   end
 
@@ -646,6 +789,13 @@ module Minitest
 
     def start # :nodoc:
       self.reporters.each(&:start)
+    end
+
+    def prerecord klass, name # :nodoc:
+      self.reporters.each do |reporter|
+        # TODO: remove conditional for minitest 6
+        reporter.prerecord klass, name if reporter.respond_to? :prerecord
+      end
     end
 
     def record result # :nodoc:
@@ -779,15 +929,26 @@ module Minitest
     end
   end
 
-  class BacktraceFilter # :nodoc:
+  ##
+  # The standard backtrace filter for minitest.
+  #
+  # See Minitest.backtrace_filter=.
+
+  class BacktraceFilter
+
+    MT_RE = %r%lib/minitest% #:nodoc:
+
+    ##
+    # Filter +bt+ to something useful. Returns the whole thing if $DEBUG.
+
     def filter bt
       return ["No backtrace"] unless bt
 
       return bt.dup if $DEBUG
 
-      new_bt = bt.take_while { |line| line !~ /lib\/minitest/ }
-      new_bt = bt.select     { |line| line !~ /lib\/minitest/ } if new_bt.empty?
-      new_bt = bt.dup                                           if new_bt.empty?
+      new_bt = bt.take_while { |line| line !~ MT_RE }
+      new_bt = bt.select     { |line| line !~ MT_RE } if new_bt.empty?
+      new_bt = bt.dup                                 if new_bt.empty?
 
       new_bt
     end
@@ -797,11 +958,13 @@ module Minitest
 
   def self.run_one_method klass, method_name # :nodoc:
     result = klass.new(method_name).run
-    raise "#{klass}#run _must_ return self" unless klass === result
+    raise "#{klass}#run _must_ return a Result" unless Result === result
     result
   end
 
-  if defined? Process::CLOCK_MONOTONIC
+  # :stopdoc:
+
+  if defined? Process::CLOCK_MONOTONIC # :nodoc:
     def self.clock_time
       Process.clock_gettime Process::CLOCK_MONOTONIC
     end
@@ -810,6 +973,15 @@ module Minitest
       Time.now
     end
   end
+
+  class Runnable # re-open
+    def self.inherited klass # :nodoc:
+      self.runnables << klass
+      super
+    end
+  end
+
+  # :startdoc:
 end
 
 require "minitest/test"

@@ -16,7 +16,7 @@ Last-Update: 2016-06-01
  require "minitest/mock"
 --- a/lib/minitest.rb
 +++ b/lib/minitest.rb
-@@ -86,7 +86,7 @@
+@@ -87,7 +87,7 @@ module Minitest
  
      seen = {}
  
